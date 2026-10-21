@@ -183,7 +183,7 @@ function renderCard(d) {
 function renderForm() {
   const saved = load();
   app.innerHTML = `
-    <h1>Crea tu carnet de emergencia</h1>
+    <h1>Crea tu hoja de vida</h1>
     <p>Llena los datos y genera el QR. Pégalo en la mochila, pulsera o carnet.</p>
     <p class="saved" id="savedmsg" hidden>💾 Tus datos se guardan solos en este celular/computador.</p>
     ${location.protocol === 'file:' ? '<div class="warn">⚠️ Abriste el archivo desde el computador. El QR solo funcionará cuando esta página esté publicada en internet (por ejemplo en GitHub Pages).</div>' : ''}
