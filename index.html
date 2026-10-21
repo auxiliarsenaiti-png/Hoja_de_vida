@@ -19,24 +19,15 @@ p{margin:.3em 0}
 
 /* ---- Tabla de la tarjeta (mismo formato del documento) ---- */
 .tbl{background:var(--card);border:2px solid var(--ink);border-radius:6px;margin:16px 0;overflow:hidden}
-.t-row{display:grid;grid-template-columns:38% 1fr;border-top:1px solid var(--ink)}
+.t-row{display:grid;grid-template-columns:1fr;border-top:1px solid var(--ink)}
 .t-row:first-child{border-top:0}
-.t-title{padding:16px 12px;font-weight:700;font-size:1rem;line-height:1.3;text-transform:uppercase;border-right:1px solid var(--ink);background:#f1f5f9;overflow-wrap:anywhere}
+.t-title{padding:12px 14px;font-weight:700;font-size:1.05rem;line-height:1.3;letter-spacing:.02em;text-transform:uppercase;background:var(--ink);color:#fff;overflow-wrap:anywhere}
 .t-body{padding:14px 14px;min-width:0}
 .ibox{background:#fff;border:2px solid var(--ink);border-radius:10px;box-shadow:0 2px 0 rgba(20,33,61,.15);padding:12px 14px;margin:0 0 10px;line-height:1.5;overflow-wrap:anywhere;white-space:pre-line}
 .ibox:last-child{margin-bottom:0}
 .t-body p{margin:.3em 0;white-space:pre-line;overflow-wrap:anywhere}
 .t-body ul{margin:0;padding-left:20px}
 .t-body li{margin:.25em 0;overflow-wrap:anywhere}
-.t-gen{grid-template-columns:1fr}
-.t-gen .t-title{background:var(--ink);color:#fff;border-right:0;padding:12px 14px;font-size:1.05rem;letter-spacing:.02em}
-.t-gen .t-body{padding:12px 14px}
-.t-alert .t-title{background:var(--alertbg);color:var(--alert)}
-.t-no .t-title{background:var(--nobg);color:var(--no)}
-.t-help .t-title{background:var(--helpbg);color:var(--main)}
-.t-like .t-title{background:var(--likebg);color:var(--like)}
-.t-sleep .t-title{background:var(--sleepbg);color:#4338ca}
-@media (max-width:360px){.t-row{grid-template-columns:1fr}.t-title{border-right:0;border-bottom:1px solid var(--ink)}}
 
 /* ---- Formulario ---- */
 h2.fh{background:var(--ink);color:#fff;padding:8px 12px;border-radius:10px;margin:26px 0 4px;font-size:1rem;text-transform:uppercase}
