@@ -19,11 +19,13 @@ p{margin:.3em 0}
 
 /* ---- Tabla de la tarjeta (mismo formato del documento) ---- */
 .tbl{background:var(--card);border:2px solid var(--ink);border-radius:6px;margin:16px 0;overflow:hidden}
-.t-row{display:grid;grid-template-columns:34% 1fr;border-top:1px solid var(--ink)}
+.t-row{display:grid;grid-template-columns:38% 1fr;border-top:1px solid var(--ink)}
 .t-row:first-child{border-top:0}
-.t-title{padding:10px;font-weight:700;font-size:.82rem;line-height:1.25;text-transform:uppercase;border-right:1px solid var(--ink);background:#f1f5f9;overflow-wrap:anywhere}
-.t-body{padding:10px 12px;min-width:0}
-.t-body p{margin:.15em 0;white-space:pre-line;overflow-wrap:anywhere}
+.t-title{padding:16px 12px;font-weight:700;font-size:1rem;line-height:1.3;text-transform:uppercase;border-right:1px solid var(--ink);background:#f1f5f9;overflow-wrap:anywhere}
+.t-body{padding:14px 14px;min-width:0}
+.ibox{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:0 0 10px;line-height:1.5;overflow-wrap:anywhere;white-space:pre-line}
+.ibox:last-child{margin-bottom:0}
+.t-body p{margin:.3em 0;white-space:pre-line;overflow-wrap:anywhere}
 .t-body ul{margin:0;padding-left:20px}
 .t-body li{margin:.25em 0;overflow-wrap:anywhere}
 .t-alert .t-title{background:var(--alertbg);color:var(--alert)}
@@ -103,7 +105,7 @@ function renderCard(d) {
   const contacts = (d.k || []).filter(([, t]) => t);
 
   const lines = a => a.filter(Boolean).map(x => `<p>${esc(x)}</p>`).join('');
-  const ul = items => items.length ? `<ul>${items.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '';
+  const ul = items => items.length ? items.map(x => `<div class="ibox">${esc(x)}</div>`).join('') : '';
   const row = (cls, title, body) => body ? `<div class="t-row ${cls}"><div class="t-title">${title}</div><div class="t-body">${body}</div></div>` : '';
 
   const general = [
@@ -183,7 +185,7 @@ function renderCard(d) {
 function renderForm() {
   const saved = load();
   app.innerHTML = `
-    <h1>Crea tu hoja de vida</h1>
+    <h1>Crea tu carnet de emergencia</h1>
     <p>Llena los datos y genera el QR. Pégalo en la mochila, pulsera o carnet.</p>
     <p class="saved" id="savedmsg" hidden>💾 Tus datos se guardan solos en este celular/computador.</p>
     ${location.protocol === 'file:' ? '<div class="warn">⚠️ Abriste el archivo desde el computador. El QR solo funcionará cuando esta página esté publicada en internet (por ejemplo en GitHub Pages).</div>' : ''}
