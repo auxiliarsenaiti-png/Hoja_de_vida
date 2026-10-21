@@ -6,24 +6,35 @@
 <title>Carnet de emergencia</title>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#eef4f8;--ink:#14213d;--card:#fff;--line:#c9d6e2;--main:#0f766e;--alert:#b45309;--alertbg:#fff4e0;--no:#9b1c1c;--nobg:#fdecec;--like:#1d6b3a;--likebg:#eaf7ee}
+:root{--bg:#eef4f8;--ink:#14213d;--card:#fff;--line:#c9d6e2;--main:#0f766e;--alert:#b45309;--alertbg:#fff4e0;--no:#9b1c1c;--nobg:#fdecec;--like:#1d6b3a;--likebg:#eaf7ee;--helpbg:#e3f4f1;--sleepbg:#eceeff}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.5 "Atkinson Hyperlegible",system-ui,sans-serif}
 main{max-width:560px;margin:0 auto;padding:20px 16px 48px}
 h1{font-size:2rem;line-height:1.15;margin:.2em 0 .3em}
-h2{font-size:1.15rem;margin:0 0 .4em}
 p{margin:.3em 0}
-section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:14px 0;white-space:pre-line}
-section.alert{background:var(--alertbg);border-color:var(--alert)}
-section.alert h2{color:var(--alert)}
-section.no{background:var(--nobg);border-color:var(--no)}
-section.no h2{color:var(--no)}
-section.like{background:var(--likebg);border-color:var(--like)}
-section.like h2{color:var(--like)}
-section.sleep{background:#eef0ff;border-color:#4f46e5}
-section.sleep h2{color:#4338ca}
 .head{text-align:center}
 .avatar{width:96px;height:96px;border-radius:50%;background:var(--main);color:#fff;font-size:3rem;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto 8px}
+.avatar.boy{background:#cfe3fb}
+.avatar.girl{background:#fbd5e8}
+
+/* ---- Tabla de la tarjeta (mismo formato del documento) ---- */
+.tbl{background:var(--card);border:2px solid var(--ink);border-radius:6px;margin:16px 0;overflow:hidden}
+.t-row{display:grid;grid-template-columns:34% 1fr;border-top:1px solid var(--ink)}
+.t-row:first-child{border-top:0}
+.t-title{padding:10px;font-weight:700;font-size:.82rem;line-height:1.25;text-transform:uppercase;border-right:1px solid var(--ink);background:#f1f5f9;overflow-wrap:anywhere}
+.t-body{padding:10px 12px;min-width:0}
+.t-body p{margin:.15em 0;white-space:pre-line;overflow-wrap:anywhere}
+.t-body ul{margin:0;padding-left:20px}
+.t-body li{margin:.25em 0;overflow-wrap:anywhere}
+.t-alert .t-title{background:var(--alertbg);color:var(--alert)}
+.t-no .t-title{background:var(--nobg);color:var(--no)}
+.t-help .t-title{background:var(--helpbg);color:var(--main)}
+.t-like .t-title{background:var(--likebg);color:var(--like)}
+.t-sleep .t-title{background:var(--sleepbg);color:#4338ca}
+@media (max-width:360px){.t-row{grid-template-columns:1fr}.t-title{border-right:0;border-bottom:1px solid var(--ink)}}
+
+/* ---- Formulario ---- */
+h2.fh{background:var(--ink);color:#fff;padding:8px 12px;border-radius:10px;margin:26px 0 4px;font-size:1rem;text-transform:uppercase}
 label{display:block;font-weight:700;margin:14px 0 4px}
 input,textarea,select{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
 textarea{min-height:76px}.item{display:grid;grid-template-columns:1fr auto;gap:8px;margin:6px 0}.item:has(.t){grid-template-columns:1fr 1fr auto}.item button{width:auto;margin:0;padding:10px 14px;background:#fff;color:var(--no);border:2px solid var(--no)}
@@ -43,7 +54,7 @@ small{color:#4a5b70}
 </head>
 <body>
 <main id="app"></main>
- 
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
 const app = document.getElementById('app');
@@ -52,12 +63,11 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>'
 // Números colombianos de 10 dígitos reciben el 57 automáticamente
 const digits = s => { const d = s.replace(/\D/g, ''); return d.length === 10 ? '57' + d : d; };
 const ytId = s => { const m = s.match(/(?:youtu\.be\/|v=|shorts\/|embed\/)([\w-]{11})/); return m ? m[1] : (/^[\w-]{11}$/.test(s) ? s : ''); };
- 
-/* Máximo de caracteres del link para que el QR todavía se pueda generar.
-   (Un QR llega a ~2950 caracteres; dejamos margen.) */
-const MAX_URL = 2800;
+
+/* Único límite: lo que físicamente cabe en un QR (versión 40, ~2953 caracteres). La página no pone otro. */
+const MAX_URL = 2953;
 const STORE_KEY = 'carnet-emergencia-v1';
- 
+
 /* ============ Compresión: cabe mucho más texto en el mismo QR ============ */
 const toB64u = bytes => {
   let s = ''; for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
@@ -80,56 +90,84 @@ async function unpack(s) {
   if (s[0] === 'z') bytes = await pipe(bytes, new DecompressionStream('deflate-raw'));
   return JSON.parse(new TextDecoder().decode(bytes));
 }
- 
+
 /* ============ Guardado en el navegador ============ */
 const save = d => { try { localStorage.setItem(STORE_KEY, JSON.stringify(d)); return true; } catch (e) { return false; } };
 const load = () => { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch (e) { return {}; } };
- 
+
 /* ============ TARJETA (lo que se ve al escanear el QR) ============ */
 function renderCard(d) {
   const g = k => String(d[k] || '').trim();
-  const name = g('n'), vid = g('v');
   const list = k => (d[k] || []).map(x => String(x).trim()).filter(Boolean);
-  const block = (cls, title, text) => text ? `<section class="${cls}"><h2>${title}</h2>${esc(text)}</section>` : '';
-  const medical = [g('s') && 'Tipo de sangre: ' + g('s'), g('a') && 'Alergias: ' + g('a')].filter(Boolean).join('\n');
+  const name = g('n'), vid = g('v');
   const contacts = (d.k || []).filter(([, t]) => t);
-  const helps = list('h').map(x => '• ' + x).join('\n');
-  const likes = list('l').map(x => '• ' + x).join('\n');
+
+  const lines = a => a.filter(Boolean).map(x => `<p>${esc(x)}</p>`).join('');
+  const ul = items => items.length ? `<ul>${items.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '';
+  const row = (cls, title, body) => body ? `<div class="t-row ${cls}"><div class="t-title">${title}</div><div class="t-body">${body}</div></div>` : '';
+
+  const general = [
+    'Nombre: ' + name,
+    g('d') && 'Tengo diagnóstico de ' + g('d'),
+    g('b'),
+    g('c'),                                   // carnets viejos
+    contacts.length && 'Número de contacto: ' + contacts.map(([, t]) => t).join(' - ')
+  ];
+  const alerta = [
+    g('s') && 'Tipo de sangre: ' + g('s'),
+    g('a') && 'Alergias: ' + g('a'),
+    g('m') && 'Medicamentos: ' + g('m'),
+    g('o') && 'Comunicación: ' + g('o')
+  ];
+  const incomoda = list('i').concat(g('x') ? [g('x')] : []);   // 'x' = carnets viejos ("Qué NO hacer")
+  const helps = list('h'), likes = list('l');
   const calls = contacts.map(([k, t]) => `<a class="btn call" href="tel:+${digits(t)}">📞 Llamar a ${esc(k || t)}</a>`).join('');
   document.title = 'Información de emergencia - ' + name;
- 
+  const sex = g('p');
+  const av = sex === 'niño' ? ['boy', '👦'] : sex === 'niña' ? ['girl', '👧'] : ['', name[0].toUpperCase()];
+
   app.innerHTML = `
     <div class="head">
-      <div class="avatar" aria-hidden="true">${esc(name[0].toUpperCase())}</div>
+      <div class="avatar ${av[0]}" aria-hidden="true">${av[1]}</div>
       <h1>Hola, soy ${esc(name)}</h1>
-      ${g('c') ? `<p>${esc(g('c'))}</p>` : ''}
       <p><small>Por favor, lee esta información para ayudarme.</small></p>
     </div>
     ${vid ? `<button id="vbtn">🎵 Ponme mi video o canción favorita</button><div id="vbox" hidden></div>` : ''}
     <button class="alt" id="speak">🔊 Leer instrucciones en voz alta</button>
     <button class="alt" id="loc">📍 Enviar mi ubicación por WhatsApp</button>
-    ${block('alert', '⚠️ Alerta médica y seguridad', medical)}
-    ${block('no', '🛑 Qué NO hacer', g('x'))}
-    ${block('', '✅ Cómo ayudarme ahora', helps)}
-    ${block('like', '💚 Lo que me gusta', likes)}
-    ${block('sleep', '😴 Mi sueño', g('u'))}
+    <div class="tbl">
+      ${row('t-gen', 'Datos generales', lines(general))}
+      ${row('t-alert', 'Alerta médica y seguridad', lines(alerta))}
+      ${row('t-no', 'Qué me incomoda o se me dificulta', ul(incomoda))}
+      ${row('t-help', 'Cómo puedes ayudarme', ul(helps))}
+      ${row('t-like', 'Gustos', ul(likes))}
+      ${row('t-sleep', 'Sueño', lines([g('u')]))}
+    </div>
     ${calls}`;
- 
+
   if (vid) $('vbtn').onclick = () => {
     const box = $('vbox'), open = box.hidden;
     box.hidden = !open;
     box.innerHTML = open ? `<iframe class="video" allow="autoplay; encrypted-media" allowfullscreen src="https://www.youtube-nocookie.com/embed/${vid}?autoplay=1"></iframe>` : '';
     $('vbtn').textContent = open ? 'Ocultar' : '🎵 Ponme mi video o canción favorita';
   };
- 
+
   $('speak').onclick = () => {
     if (!('speechSynthesis' in window)) return alert('Este celular no puede leer en voz alta.');
     speechSynthesis.cancel();
-    const txt = [`Hola, soy ${name}.`, g('c'), medical, g('x') && 'Qué no hacer. ' + g('x'), helps && 'Cómo ayudarme. ' + helps, likes && 'Lo que me gusta. ' + likes, g('u') && 'Mi sueño. ' + g('u')].filter(Boolean).join('. ');
+    const txt = [
+      `Hola, soy ${name}.`,
+      g('d') && 'Tengo diagnóstico de ' + g('d'), g('b'), g('c'),
+      ...alerta,
+      incomoda.length && 'Qué me incomoda o se me dificulta. ' + incomoda.join('. '),
+      helps.length && 'Cómo puedes ayudarme. ' + helps.join('. '),
+      likes.length && 'Mis gustos. ' + likes.join('. '),
+      g('u') && 'Sueño. ' + g('u')
+    ].filter(Boolean).join('. ');
     const u = new SpeechSynthesisUtterance(txt); u.lang = 'es-ES'; u.rate = .9;
     speechSynthesis.speak(u);
   };
- 
+
   $('loc').onclick = () => {
     const to = digits((contacts[0] || [])[1] || '');
     if (!navigator.geolocation) return alert('No se pudo obtener la ubicación.');
@@ -140,7 +178,7 @@ function renderCard(d) {
     }, () => alert('Activa la ubicación del celular y permite el acceso.'), { enableHighAccuracy: true, timeout: 10000 });
   };
 }
- 
+
 /* ============ FORMULARIO (para el papá) ============ */
 function renderForm() {
   const saved = load();
@@ -149,27 +187,43 @@ function renderForm() {
     <p>Llena los datos y genera el QR. Pégalo en la mochila, pulsera o carnet.</p>
     <p class="saved" id="savedmsg" hidden>💾 Tus datos se guardan solos en este celular/computador.</p>
     ${location.protocol === 'file:' ? '<div class="warn">⚠️ Abriste el archivo desde el computador. El QR solo funcionará cuando esta página esté publicada en internet (por ejemplo en GitHub Pages).</div>' : ''}
-    <label for="n">Nombre del niño/a *</label><input id="n" autocomplete="off">
-    <label for="c">Mensaje corto: lo más importante que deben saber de mí</label>
-    <textarea id="c" placeholder="Ejemplo: Soy autista no gritos."></textarea>
-    <div class="row">
-      <div><label for="s">Tipo de sangre</label><input id="s" placeholder="O+"></div>
-      <div><label for="a">Alergias</label><input id="a" placeholder="Durazno, lácteos"></div>
-    </div>
-    <label for="x">Qué NO hacer</label>
-    <textarea id="x" placeholder="No tocarme por sorpresa. No gritar."></textarea>
-    <label>Cómo ayudarme</label>
-    <div id="hl"></div>
-    <button type="button" class="alt" id="hadd">➕ Agregar indicación</button>
-    <label>Lo que me gusta</label>
-    <div id="ll"></div>
-    <button type="button" class="alt" id="ladd">➕ Agregar algo que me gusta</button>
-    <label for="u">Sueño</label>
-    <textarea id="u" placeholder="Ejemplo: Tengo problemas con mi rutina del sueño. Pregunta a mis padres cómo dormí."></textarea>
-    <label for="v">Video o canción favorita (link de YouTube, opcional)</label><input id="v" placeholder="https://youtu.be/...">
-    <label>Contactos * (el primero recibe tu ubicación por WhatsApp)</label>
+
+    <h2 class="fh">Datos generales</h2>
+    <label for="n">Nombre *</label><input id="n" autocomplete="off">
+    <label for="p">Soy (sale como dibujo arriba del carnet)</label>
+    <select id="p"><option value="">Sin indicar (sale la inicial del nombre)</option><option value="niño">Niño 👦</option><option value="niña">Niña 👧</option></select>
+    <label for="d">Tengo diagnóstico de</label><input id="d" placeholder="Autismo" autocomplete="off">
+    <label for="b">¿Hablas?</label>
+    <select id="b"><option value="">Sin indicar</option><option>Soy hablante</option><option>Soy no hablante</option></select>
+    <label>Número de contacto * (el primero recibe tu ubicación por WhatsApp)</label>
     <div id="cl"></div>
     <button type="button" class="alt" id="cadd">➕ Agregar contacto</button>
+
+    <h2 class="fh">Alerta médica y seguridad</h2>
+    <div class="row">
+      <div><label for="s">Tipo de sangre</label><input id="s" placeholder="O+"></div>
+      <div><label for="a">Alergias</label><input id="a" placeholder="Ninguna"></div>
+    </div>
+    <label for="m">Medicamentos</label><input id="m" placeholder="Nombre, dosis y horario" autocomplete="off">
+    <label for="o">Comunicación</label><input id="o" placeholder="SAAC, pictogramas y señalamientos" autocomplete="off">
+
+    <h2 class="fh">Qué me incomoda o se me dificulta</h2>
+    <div id="il"></div>
+    <button type="button" class="alt" id="iadd">➕ Agregar</button>
+
+    <h2 class="fh">Cómo puedes ayudarme</h2>
+    <div id="hl"></div>
+    <button type="button" class="alt" id="hadd">➕ Agregar indicación</button>
+
+    <h2 class="fh">Gustos</h2>
+    <div id="ll"></div>
+    <button type="button" class="alt" id="ladd">➕ Agregar gusto</button>
+    <label for="v">Video o canción favorita (link de YouTube, opcional)</label><input id="v" placeholder="https://youtu.be/...">
+
+    <h2 class="fh">Sueño</h2>
+    <textarea id="u" placeholder="Ejemplo: Tengo problemas con mi rutina del sueño. Pregunta a mis padres cómo dormí."></textarea>
+
+    <p id="cap" aria-live="polite" style="font-size:.9rem;margin:6px 0"></p>
     <button id="go">Generar QR</button>
     <p id="err" role="alert" style="color:#b00020"></p>
     <div id="out" hidden>
@@ -180,7 +234,7 @@ function renderForm() {
       <p class="link" id="url"></p>
     </div>
     <button type="button" class="danger" id="clear">🗑️ Borrar datos guardados y empezar de cero</button>`;
- 
+
   function addRow(list, html, values, focus) {
     const d = document.createElement('div'); d.className = 'item';
     d.innerHTML = html + '<button type="button" class="x" aria-label="Quitar">✕</button>';
@@ -189,33 +243,58 @@ function renderForm() {
     $(list).appendChild(d);
     if (focus) d.querySelector('input').focus();
   }
-  const helpRow = (first, v, focus) => addRow('hl', `<input class="hv" placeholder="${first ? 'Háblame suave y con órdenes cortas.' : 'Otra indicación'}">`, [v], focus);
-  const likeRow = (first, v, focus) => addRow('ll', `<input class="lv" placeholder="${first ? 'Los carros, el color azul, la música' : 'Otra cosa que me gusta'}">`, [v], focus);
+  const listRow = (list, first, other) => (isFirst, v, focus) => addRow(list, `<input placeholder="${isFirst ? first : other}">`, [v], focus);
+  const incRow = listRow('il', 'Sonidos fuertes', 'Otra cosa que me incomoda');
+  const helpRow = listRow('hl', 'Háblame suave y con órdenes cortas.', 'Otra indicación');
+  const likeRow = listRow('ll', 'Libros, rompecabezas', 'Otro gusto');
   const contactRow = (first, k, t, focus) => addRow('cl', `<input class="k" placeholder="${first ? 'Acudiente' : 'Otro contacto'}"><input class="t" type="tel" placeholder="3001234567">`, [k, t], focus);
- 
+
   // Lee todo lo que hay en el formulario
   const collect = () => {
     const v = id => $(id).value.trim();
     const vals = sel => [...document.querySelectorAll(sel)].map(i => i.value.trim()).filter(Boolean);
     return {
-      n: v('n'), c: v('c'), s: v('s'), a: v('a'), x: v('x'), u: v('u'), v: v('v'),
-      h: vals('#hl input'), l: vals('#ll input'),
+      n: v('n'), p: v('p'), d: v('d'), b: v('b'), s: v('s'), a: v('a'), m: v('m'), o: v('o'), u: v('u'), v: v('v'),
+      i: vals('#il input'), h: vals('#hl input'), l: vals('#ll input'),
       k: [...document.querySelectorAll('#cl .item')].map(r => [r.querySelector('.k').value.trim(), r.querySelector('.t').value.trim()]).filter(([k, t]) => k || t)
     };
   };
-  function persist() { if (save(collect())) $('savedmsg').hidden = false; }
- 
+  function persist() { if (save(collect())) $('savedmsg').hidden = false; updateCap(); }
+
+  // Medidor de espacio del QR (sin bloquear: solo avisa)
+  let capTimer;
+  function updateCap() {
+    clearTimeout(capTimer);
+    capTimer = setTimeout(async () => {
+      const f = collect(), data = { ...f, k: f.k.filter(([, t]) => t) };
+      if (f.v) data.v = ytId(f.v) || '';
+      for (const k of Object.keys(data)) if (Array.isArray(data[k]) ? !data[k].length : !data[k]) delete data[k];
+      const len = (location.href.split('#')[0] + '#d=' + await pack(data)).length;
+      const pct = Math.round(len / MAX_URL * 100), el = $('cap');
+      if (!el) return;
+      el.textContent = pct > 100 ? `⛔ Ya no cabe en el QR (${pct}%). Acorta un poco el texto.`
+        : pct > 80 ? `⚠️ Espacio del QR usado: ${pct}%. El QR queda muy denso: imprímelo grande.`
+        : `Espacio del QR usado: ${pct}%`;
+      el.style.color = pct > 100 ? '#b00020' : pct > 80 ? '#b45309' : '#4a5b70';
+    }, 300);
+  }
+
   // Rellena con lo guardado
-  for (const k of ['n', 'c', 's', 'a', 'x', 'u', 'v']) $(k).value = saved[k] || '';
+  for (const k of ['n', 'p', 'd', 'b', 's', 'a', 'm', 'o', 'u', 'v']) $(k).value = saved[k] || '';
+  const I = saved.i && saved.i.length ? saved.i : (saved.x ? [saved.x] : ['']);   // 'x' = versión anterior
   const H = saved.h && saved.h.length ? saved.h : [''];
   const L = saved.l && saved.l.length ? saved.l : [''];
   const K = saved.k && saved.k.length ? saved.k : [['', '']];
+  I.forEach((v, i) => incRow(i === 0, v));
   H.forEach((v, i) => helpRow(i === 0, v));
   L.forEach((v, i) => likeRow(i === 0, v));
   K.forEach(([k, t], i) => contactRow(i === 0, k, t));
   if (Object.keys(saved).length) $('savedmsg').hidden = false;
- 
+  updateCap();
+
   app.oninput = persist;
+  app.onchange = persist;
+  $('iadd').onclick = () => incRow(false, '', true);
   $('hadd').onclick = () => helpRow(false, '', true);
   $('ladd').onclick = () => likeRow(false, '', true);
   $('cadd').onclick = () => contactRow(false, '', '', true);
@@ -225,20 +304,19 @@ function renderForm() {
     try { localStorage.removeItem(STORE_KEY); } catch (e) {}
     renderForm();
   };
- 
+
   async function generate() {
     const err = $('err'), f = collect();
     const contacts = f.k.filter(([, t]) => t);
     if (!f.n || !contacts.length) { err.textContent = 'Falta el nombre y al menos un contacto con teléfono.'; return; }
     const data = { ...f, k: contacts };
     if (f.v) { const id = ytId(f.v); if (!id) { err.textContent = 'El link de YouTube no es válido.'; return; } data.v = id; }
-    else delete data.v;
     for (const k of Object.keys(data)) if (Array.isArray(data[k]) ? !data[k].length : !data[k]) delete data[k];
- 
+
     persist();
     const url = location.href.split('#')[0] + '#d=' + await pack(data);
     if (url.length > MAX_URL) {
-      err.textContent = `Hay demasiado texto (${url.length - MAX_URL} caracteres de más). Acorta un poco las indicaciones para que el QR se pueda escanear.`;
+      err.textContent = `Ya no cabe más texto en un QR (sobran ${url.length - MAX_URL} caracteres). Acorta un poco.`;
       return;
     }
     err.textContent = '';
@@ -253,7 +331,7 @@ function renderForm() {
     } catch (e) { err.textContent = 'No se pudo generar el QR: ' + e.message; }
   }
 }
- 
+
 function drawQR(text, box) {
   const q = qrcode(0, 'L');           // 0 = tamaño automático (hasta versión 40)
   q.addData(text); q.make();
@@ -265,7 +343,7 @@ function drawQR(text, box) {
   box.appendChild(cv);
   return cv;
 }
- 
+
 /* ============ Router ============ */
 async function route() {
   const p = new URLSearchParams(location.hash.slice(1));
@@ -288,4 +366,3 @@ route();
 </script>
 </body>
 </html>
- 
