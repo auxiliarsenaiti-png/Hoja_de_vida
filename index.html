@@ -89,8 +89,18 @@ const ytId = s => { const m = s.match(/(?:youtu\.be\/|v=|shorts\/|embed\/)([\w-]
 
 /* Único límite: lo que físicamente cabe en un QR (versión 40, ~2953 caracteres). La página no pone otro. */
 const MAX_URL = 2953;
-const MAX_FOTO = 1700;   // tope de caracteres de la foto (para dejar espacio al texto)
-const fotoSrc = v => /^[A-Za-z0-9+/=]{20,}$/.test(v || '') ? `data:image/${v.startsWith('/9j/') ? 'jpeg' : v.startsWith('UklGR') ? 'webp' : 'png'};base64,${v}` : '';
+// Acepta un link directo a la imagen (https) o una foto de Google Drive compartida con "cualquier persona con el enlace"
+const normFoto = t => {
+  t = String(t || '').trim(); if (!t) return '';
+  const m = t.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:export=\w+&)?id=)([\w-]{10,})/);
+  if (m) return 'g:' + m[1];
+  return /^https:\/\/[^\s"'<>]{4,300}$/.test(t) ? t : '';
+};
+const fotoSrc = v => {
+  v = String(v || '');
+  if (/^g:[\w-]{10,}$/.test(v)) return 'https://drive.google.com/thumbnail?id=' + v.slice(2) + '&sz=w600';
+  return /^https:\/\/[^\s"'<>]{4,300}$/.test(v) ? v : '';
+};
 
 const STORE_KEY = 'carnet-emergencia-v1';
 
@@ -229,7 +239,7 @@ function renderForm() {
       <div class="badge" aria-hidden="true">🛡️</div>
       <h1>Crea tu carnet de emergencia</h1>
       <p>Llena los datos y genera el QR. Pégalo en la mochila, pulsera o carnet.</p>
-      <div class="testtag">🧪 Versión de prueba: foto dentro del QR</div>
+      <div class="testtag">🧪 Versión de prueba: foto por link</div>
     </header>
     <div class="wrap"><div class="formcard">
     <p class="saved" id="savedmsg" hidden>💾 Tus datos se guardan solos en este celular/computador.</p>
@@ -239,11 +249,9 @@ function renderForm() {
     <label for="n">Nombre *</label><input id="n" autocomplete="off">
     <label for="p">Soy (sale como dibujo arriba del carnet)</label>
     <select id="p"><option value="">Sin indicar (sale la inicial del nombre)</option><option value="niño">Niño 👦</option><option value="niña">Niña 👧</option></select>
-    <label for="foto">Foto del niño (opcional, sale en vez del dibujo)</label>
-    <input id="foto" type="file" accept="image/*">
-    <div class="fprev" id="fprev" hidden><img id="fimg" alt="Foto"><button type="button" class="alt" id="fquit">Quitar foto</button></div>
-    <p><small>La foto se reduce mucho (unos 64 píxeles) para que quepa en el QR y ocupa parte del espacio del texto. Mira el medidor al final.</small></p>
-    <p id="ferr" style="color:#b00020;margin:4px 0" role="alert"></p>
+    <label for="f">Foto del niño: link de la imagen (opcional)</label>
+    <input id="f" placeholder="https://..." autocomplete="off" inputmode="url">
+    <p><small>Sirve un link directo a la imagen (termina en .jpg, .png o .webp) o una foto de Google Drive compartida como «Cualquier persona con el enlace».</small></p>
     <label for="d">Tengo diagnóstico de</label><input id="d" placeholder="Autismo" autocomplete="off">
     <label for="b">¿Hablas?</label>
     <input id="b" placeholder="Soy hablante" autocomplete="off">
@@ -302,14 +310,12 @@ function renderForm() {
   const likeRow = listRow('ll', 'Libros, rompecabezas', 'Otro gusto');
   const contactRow = (first, k, t, focus) => addRow('cl', `<input class="k" placeholder="${first ? 'Acudiente' : 'Otro contacto'}"><input class="t" type="tel" placeholder="3001234567">`, [k, t], focus);
 
-  let photo = saved.f || '';
-
   // Lee todo lo que hay en el formulario
   const collect = () => {
     const v = id => $(id).value.trim();
     const vals = sel => [...document.querySelectorAll(sel)].map(i => i.value.trim()).filter(Boolean);
     return {
-      n: v('n'), p: v('p'), d: v('d'), b: v('b'), s: v('s'), a: v('a'), m: v('m'), o: v('o'), u: v('u'), v: v('v'), f: photo,
+      n: v('n'), p: v('p'), d: v('d'), b: v('b'), s: v('s'), a: v('a'), m: v('m'), o: v('o'), u: v('u'), v: v('v'), f: v('f'),
       i: vals('#il input'), h: vals('#hl input'), l: vals('#ll input'),
       k: [...document.querySelectorAll('#cl .item')].map(r => [r.querySelector('.k').value.trim(), r.querySelector('.t').value.trim()]).filter(([k, t]) => k || t)
     };
@@ -323,6 +329,7 @@ function renderForm() {
     capTimer = setTimeout(async () => {
       const f = collect(), data = { ...f, k: f.k.filter(([, t]) => t) };
       if (f.v) data.v = ytId(f.v) || '';
+      if (f.f) data.f = normFoto(f.f) || '';
       for (const k of Object.keys(data)) if (Array.isArray(data[k]) ? !data[k].length : !data[k]) delete data[k];
       const len = (location.href.split('#')[0] + '#d=' + await pack(data)).length;
       const pct = Math.round(len / MAX_URL * 100), el = $('cap');
@@ -335,7 +342,7 @@ function renderForm() {
   }
 
   // Rellena con lo guardado
-  for (const k of ['n', 'p', 'd', 'b', 's', 'a', 'm', 'o', 'u', 'v']) $(k).value = saved[k] || '';
+  for (const k of ['n', 'p', 'd', 'b', 's', 'a', 'm', 'o', 'u', 'v', 'f']) $(k).value = saved[k] || '';
   const I = saved.i && saved.i.length ? saved.i : (saved.x ? [saved.x] : ['']);   // 'x' = versión anterior
   const H = saved.h && saved.h.length ? saved.h : [''];
   const L = saved.l && saved.l.length ? saved.l : [''];
@@ -349,38 +356,6 @@ function renderForm() {
 
   app.oninput = persist;
   app.onchange = persist;
-
-  // ---- Foto: se recorta cuadrada y se reduce hasta que ocupe poco ----
-  const showPhoto = () => { const src = fotoSrc(photo); $('fprev').hidden = !src; if (src) $('fimg').src = src; };
-  const toSmall = file => new Promise((ok, no) => {
-    const url = URL.createObjectURL(file), img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      const side = Math.min(img.width, img.height), sx = (img.width - side) / 2, sy = (img.height - side) / 2;
-      const mid = document.createElement('canvas'); mid.width = mid.height = 256;     // paso intermedio para que quede suave
-      const mx = mid.getContext('2d'); mx.imageSmoothingQuality = 'high'; mx.drawImage(img, sx, sy, side, side, 0, 0, 256, 256);
-      for (const px of [64, 56, 48]) {
-        const cv = document.createElement('canvas'); cv.width = cv.height = px;
-        const cx = cv.getContext('2d'); cx.imageSmoothingQuality = 'high'; cx.drawImage(mid, 0, 0, px, px);
-        for (const q of [.6, .5, .4, .3]) {
-          let d = cv.toDataURL('image/webp', q);
-          if (!d.startsWith('data:image/webp')) d = cv.toDataURL('image/jpeg', q);   // Safari no genera webp
-          const b64 = d.split(',')[1];
-          if (b64.length <= MAX_FOTO || (px === 48 && q === .3)) return ok(b64);
-        }
-      }
-    };
-    img.onerror = () => no(new Error('No se pudo leer la foto. Prueba con otra.'));
-    img.src = url;
-  });
-  $('foto').onchange = async e => {
-    const file = e.target.files[0]; $('ferr').textContent = '';
-    if (!file) return;
-    try { photo = await toSmall(file); } catch (x) { $('ferr').textContent = x.message; }
-    showPhoto(); persist(); e.target.value = '';
-  };
-  $('fquit').onclick = () => { photo = ''; showPhoto(); persist(); };
-  showPhoto();
   $('iadd').onclick = () => incRow(false, '', true);
   $('hadd').onclick = () => helpRow(false, '', true);
   $('ladd').onclick = () => likeRow(false, '', true);
@@ -397,6 +372,7 @@ function renderForm() {
     const contacts = f.k.filter(([, t]) => t);
     if (!f.n || !contacts.length) { err.textContent = 'Falta el nombre y al menos un contacto con teléfono.'; return; }
     const data = { ...f, k: contacts };
+    if (f.f) { const nf = normFoto(f.f); if (!nf) { err.textContent = 'El link de la foto no es válido. Debe empezar por https://'; return; } data.f = nf; }
     if (f.v) { const id = ytId(f.v); if (!id) { err.textContent = 'El link de YouTube no es válido.'; return; } data.v = id; }
     for (const k of Object.keys(data)) if (Array.isArray(data[k]) ? !data[k].length : !data[k]) delete data[k];
 
