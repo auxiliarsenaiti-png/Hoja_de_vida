@@ -48,13 +48,6 @@ body.formview main{max-width:none;padding:0 0 56px}
 .callbar a.btn:nth-child(3){background:#16a34a}
 .callbar a.btn:nth-child(n+4){background:#7c3aed}
 
-.avatar{overflow:hidden}
-.avatar img{width:100%;height:100%;object-fit:cover;display:block}
-.fprev{display:flex;align-items:center;gap:14px;margin:10px 0}
-.fprev img{width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.2)}
-.fprev button{width:auto;margin:0;padding:10px 16px}
-.testtag{display:inline-block;background:#fff;color:#7c3aed;font-weight:700;font-size:.85rem;padding:4px 12px;border-radius:999px;margin-top:10px}
-
 /* ---- Formulario ---- */
 h2.fh{background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;padding:10px 14px;border-radius:12px;margin:26px 0 4px;font-size:1rem;text-transform:uppercase;box-shadow:0 4px 10px rgba(37,99,235,.25)}
 .formcard h2.fh:first-of-type{margin-top:18px}
@@ -89,8 +82,6 @@ const ytId = s => { const m = s.match(/(?:youtu\.be\/|v=|shorts\/|embed\/)([\w-]
 
 /* Único límite: lo que físicamente cabe en un QR (versión 40, ~2953 caracteres). La página no pone otro. */
 const MAX_URL = 2953;
-const fotoSrc = v => /^[a-z0-9][a-z0-9._-]{0,59}\.(jpe?g|png|webp)$/i.test(v || '') ? new URL('fotos/' + v, location.href.split('#')[0].split('?')[0]).href : '';
-
 const STORE_KEY = 'carnet-emergencia-v1';
 
 /* ============ Compresión: cabe mucho más texto en el mismo QR ============ */
@@ -156,12 +147,11 @@ function renderCard(d) {
   document.title = 'Información de emergencia - ' + name;
   const sex = g('p');
   const av = sex === 'niño' ? ['boy', '👦'] : sex === 'niña' ? ['girl', '👧'] : ['', name[0].toUpperCase()];
-  const photo = fotoSrc(g('f'));
 
   document.body.classList.add('carnet');
   app.innerHTML = `
     <header class="hero">
-      <div class="avatar ${photo ? '' : av[0]}" aria-hidden="true">${photo ? `<img src="${photo}" alt="" referrerpolicy="no-referrer">` : av[1]}</div>
+      <div class="avatar ${av[0]}" aria-hidden="true">${av[1]}</div>
       <h1>Hola, soy ${esc(name)}</h1>
       ${resumen.map(x => `<div class="pill">${esc(x)}</div>`).join(' ')}
       <p class="sub">Por favor, lee esta información para ayudarme.</p>
@@ -180,9 +170,6 @@ function renderCard(d) {
       ${row('🌙', 'Sueño', lines([g('u')]))}
     </div>
     ${calls ? `<nav class="callbar">${calls}</nav>` : ''}`;
-
-  const im = app.querySelector('.avatar img');
-  if (im) im.onerror = () => { if (av[0]) im.parentNode.classList.add(av[0]); im.replaceWith(document.createTextNode(av[1])); };
 
   if (vid) $('vbtn').onclick = () => {
     const box = $('vbox'), open = box.hidden;
@@ -226,9 +213,8 @@ function renderForm() {
   app.innerHTML = `
     <header class="hero fhero">
       <div class="badge" aria-hidden="true">🛡️</div>
-      <h1>Crea tu carnet de emergencia</h1>
+      <h1>Crea tu hoja de vida</h1>
       <p>Llena los datos y genera el QR. Pégalo en la mochila, pulsera o carnet.</p>
-      <div class="testtag">🧪 Versión de prueba: foto en la carpeta fotos de GitHub</div>
     </header>
     <div class="wrap"><div class="formcard">
     <p class="saved" id="savedmsg" hidden>💾 Tus datos se guardan solos en este celular/computador.</p>
@@ -238,12 +224,6 @@ function renderForm() {
     <label for="n">Nombre *</label><input id="n" autocomplete="off">
     <label for="p">Soy (sale como dibujo arriba del carnet)</label>
     <select id="p"><option value="">Sin indicar (sale la inicial del nombre)</option><option value="niño">Niño 👦</option><option value="niña">Niña 👧</option></select>
-    <label for="f">Foto del niño: nombre del archivo (opcional)</label>
-    <input id="f" placeholder="esteban.jpg" autocomplete="off" autocapitalize="none">
-    <p><small>Esa foto debe estar en la carpeta <b>fotos</b> de tu GitHub, con ese mismo nombre (sin espacios ni tildes). ¿No la tienes lista? Elígela aquí y descarga una versión liviana ya con el nombre correcto:</small></p>
-    <input id="fraw" type="file" accept="image/*">
-    <a id="fdl" class="btn alt" hidden>⬇️ Descargar foto lista para subir</a>
-    <p id="ferr" style="color:#b00020;margin:4px 0" role="alert"></p>
     <label for="d">Tengo diagnóstico de</label><input id="d" placeholder="Autismo" autocomplete="off">
     <label for="b">¿Hablas?</label>
     <input id="b" placeholder="Soy hablante" autocomplete="off">
@@ -307,7 +287,7 @@ function renderForm() {
     const v = id => $(id).value.trim();
     const vals = sel => [...document.querySelectorAll(sel)].map(i => i.value.trim()).filter(Boolean);
     return {
-      n: v('n'), p: v('p'), d: v('d'), b: v('b'), s: v('s'), a: v('a'), m: v('m'), o: v('o'), u: v('u'), v: v('v'), f: v('f'),
+      n: v('n'), p: v('p'), d: v('d'), b: v('b'), s: v('s'), a: v('a'), m: v('m'), o: v('o'), u: v('u'), v: v('v'),
       i: vals('#il input'), h: vals('#hl input'), l: vals('#ll input'),
       k: [...document.querySelectorAll('#cl .item')].map(r => [r.querySelector('.k').value.trim(), r.querySelector('.t').value.trim()]).filter(([k, t]) => k || t)
     };
@@ -333,7 +313,7 @@ function renderForm() {
   }
 
   // Rellena con lo guardado
-  for (const k of ['n', 'p', 'd', 'b', 's', 'a', 'm', 'o', 'u', 'v', 'f']) $(k).value = saved[k] || '';
+  for (const k of ['n', 'p', 'd', 'b', 's', 'a', 'm', 'o', 'u', 'v']) $(k).value = saved[k] || '';
   const I = saved.i && saved.i.length ? saved.i : (saved.x ? [saved.x] : ['']);   // 'x' = versión anterior
   const H = saved.h && saved.h.length ? saved.h : [''];
   const L = saved.l && saved.l.length ? saved.l : [''];
@@ -347,29 +327,6 @@ function renderForm() {
 
   app.oninput = persist;
   app.onchange = persist;
-
-  // ---- Reducir la foto (500 px) y dejarla lista para subir a GitHub ----
-  const slug = t => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'foto';
-  $('fraw').onchange = e => {
-    const file = e.target.files[0]; $('ferr').textContent = '';
-    if (!file) return;
-    const url = URL.createObjectURL(file), img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      const side = Math.min(img.width, img.height), cv = document.createElement('canvas');
-      cv.width = cv.height = Math.min(500, side);
-      const cx = cv.getContext('2d'); cx.imageSmoothingQuality = 'high';
-      cx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, cv.width, cv.height);
-      cv.toBlob(b => {
-        const name = slug($('f').value.trim().replace(/\.[^.]+$/, '') || $('n').value) + '.jpg';
-        $('f').value = name;
-        $('fdl').href = URL.createObjectURL(b); $('fdl').download = name; $('fdl').hidden = false;
-        persist(); e.target.value = '';
-      }, 'image/jpeg', .82);
-    };
-    img.onerror = () => { $('ferr').textContent = 'No se pudo leer la foto. Prueba con otra.'; };
-    img.src = url;
-  };
   $('iadd').onclick = () => incRow(false, '', true);
   $('hadd').onclick = () => helpRow(false, '', true);
   $('ladd').onclick = () => likeRow(false, '', true);
@@ -386,7 +343,6 @@ function renderForm() {
     const contacts = f.k.filter(([, t]) => t);
     if (!f.n || !contacts.length) { err.textContent = 'Falta el nombre y al menos un contacto con teléfono.'; return; }
     const data = { ...f, k: contacts };
-    if (f.f && !fotoSrc(f.f)) { err.textContent = 'El nombre de la foto debe ser como esteban.jpg (sin espacios ni tildes, y terminar en .jpg, .png o .webp).'; return; }
     if (f.v) { const id = ytId(f.v); if (!id) { err.textContent = 'El link de YouTube no es válido.'; return; } data.v = id; }
     for (const k of Object.keys(data)) if (Array.isArray(data[k]) ? !data[k].length : !data[k]) delete data[k];
 
