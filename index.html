@@ -48,6 +48,13 @@ body.formview main{max-width:none;padding:0 0 56px}
 .callbar a.btn:nth-child(3){background:#16a34a}
 .callbar a.btn:nth-child(n+4){background:#7c3aed}
 
+.avatar{overflow:hidden}
+.avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.fprev{display:flex;align-items:center;gap:14px;margin:10px 0}
+.fprev img{width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.fprev button{width:auto;margin:0;padding:10px 16px}
+.testtag{display:inline-block;background:#fff;color:#7c3aed;font-weight:700;font-size:.85rem;padding:4px 12px;border-radius:999px;margin-top:10px}
+
 /* ---- Formulario ---- */
 h2.fh{background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;padding:10px 14px;border-radius:12px;margin:26px 0 4px;font-size:1rem;text-transform:uppercase;box-shadow:0 4px 10px rgba(37,99,235,.25)}
 .formcard h2.fh:first-of-type{margin-top:18px}
@@ -82,6 +89,9 @@ const ytId = s => { const m = s.match(/(?:youtu\.be\/|v=|shorts\/|embed\/)([\w-]
 
 /* Único límite: lo que físicamente cabe en un QR (versión 40, ~2953 caracteres). La página no pone otro. */
 const MAX_URL = 2953;
+const MAX_FOTO = 1700;   // tope de caracteres de la foto (para dejar espacio al texto)
+const fotoSrc = v => /^[A-Za-z0-9+/=]{20,}$/.test(v || '') ? `data:image/${v.startsWith('/9j/') ? 'jpeg' : v.startsWith('UklGR') ? 'webp' : 'png'};base64,${v}` : '';
+
 const STORE_KEY = 'carnet-emergencia-v1';
 
 /* ============ Compresión: cabe mucho más texto en el mismo QR ============ */
@@ -147,11 +157,12 @@ function renderCard(d) {
   document.title = 'Información de emergencia - ' + name;
   const sex = g('p');
   const av = sex === 'niño' ? ['boy', '👦'] : sex === 'niña' ? ['girl', '👧'] : ['', name[0].toUpperCase()];
+  const photo = fotoSrc(g('f'));
 
   document.body.classList.add('carnet');
   app.innerHTML = `
     <header class="hero">
-      <div class="avatar ${av[0]}" aria-hidden="true">${av[1]}</div>
+      <div class="avatar ${photo ? '' : av[0]}" aria-hidden="true">${photo ? `<img src="${photo}" alt="" referrerpolicy="no-referrer">` : av[1]}</div>
       <h1>Hola, soy ${esc(name)}</h1>
       ${resumen.map(x => `<div class="pill">${esc(x)}</div>`).join(' ')}
       <p class="sub">Por favor, lee esta información para ayudarme.</p>
@@ -170,6 +181,9 @@ function renderCard(d) {
       ${row('🌙', 'Sueño', lines([g('u')]))}
     </div>
     ${calls ? `<nav class="callbar">${calls}</nav>` : ''}`;
+
+  const im = app.querySelector('.avatar img');
+  if (im) im.onerror = () => { if (av[0]) im.parentNode.classList.add(av[0]); im.replaceWith(document.createTextNode(av[1])); };
 
   if (vid) $('vbtn').onclick = () => {
     const box = $('vbox'), open = box.hidden;
@@ -213,8 +227,9 @@ function renderForm() {
   app.innerHTML = `
     <header class="hero fhero">
       <div class="badge" aria-hidden="true">🛡️</div>
-      <h1>Crea tu hoja de vida</h1>
+      <h1>Crea tu carnet de emergencia</h1>
       <p>Llena los datos y genera el QR. Pégalo en la mochila, pulsera o carnet.</p>
+      <div class="testtag">🧪 Versión de prueba: foto dentro del QR</div>
     </header>
     <div class="wrap"><div class="formcard">
     <p class="saved" id="savedmsg" hidden>💾 Tus datos se guardan solos en este celular/computador.</p>
@@ -224,6 +239,11 @@ function renderForm() {
     <label for="n">Nombre *</label><input id="n" autocomplete="off">
     <label for="p">Soy (sale como dibujo arriba del carnet)</label>
     <select id="p"><option value="">Sin indicar (sale la inicial del nombre)</option><option value="niño">Niño 👦</option><option value="niña">Niña 👧</option></select>
+    <label for="foto">Foto del niño (opcional, sale en vez del dibujo)</label>
+    <input id="foto" type="file" accept="image/*">
+    <div class="fprev" id="fprev" hidden><img id="fimg" alt="Foto"><button type="button" class="alt" id="fquit">Quitar foto</button></div>
+    <p><small>La foto se reduce mucho (unos 64 píxeles) para que quepa en el QR y ocupa parte del espacio del texto. Mira el medidor al final.</small></p>
+    <p id="ferr" style="color:#b00020;margin:4px 0" role="alert"></p>
     <label for="d">Tengo diagnóstico de</label><input id="d" placeholder="Autismo" autocomplete="off">
     <label for="b">¿Hablas?</label>
     <input id="b" placeholder="Soy hablante" autocomplete="off">
@@ -282,12 +302,14 @@ function renderForm() {
   const likeRow = listRow('ll', 'Libros, rompecabezas', 'Otro gusto');
   const contactRow = (first, k, t, focus) => addRow('cl', `<input class="k" placeholder="${first ? 'Acudiente' : 'Otro contacto'}"><input class="t" type="tel" placeholder="3001234567">`, [k, t], focus);
 
+  let photo = saved.f || '';
+
   // Lee todo lo que hay en el formulario
   const collect = () => {
     const v = id => $(id).value.trim();
     const vals = sel => [...document.querySelectorAll(sel)].map(i => i.value.trim()).filter(Boolean);
     return {
-      n: v('n'), p: v('p'), d: v('d'), b: v('b'), s: v('s'), a: v('a'), m: v('m'), o: v('o'), u: v('u'), v: v('v'),
+      n: v('n'), p: v('p'), d: v('d'), b: v('b'), s: v('s'), a: v('a'), m: v('m'), o: v('o'), u: v('u'), v: v('v'), f: photo,
       i: vals('#il input'), h: vals('#hl input'), l: vals('#ll input'),
       k: [...document.querySelectorAll('#cl .item')].map(r => [r.querySelector('.k').value.trim(), r.querySelector('.t').value.trim()]).filter(([k, t]) => k || t)
     };
@@ -327,6 +349,38 @@ function renderForm() {
 
   app.oninput = persist;
   app.onchange = persist;
+
+  // ---- Foto: se recorta cuadrada y se reduce hasta que ocupe poco ----
+  const showPhoto = () => { const src = fotoSrc(photo); $('fprev').hidden = !src; if (src) $('fimg').src = src; };
+  const toSmall = file => new Promise((ok, no) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const side = Math.min(img.width, img.height), sx = (img.width - side) / 2, sy = (img.height - side) / 2;
+      const mid = document.createElement('canvas'); mid.width = mid.height = 256;     // paso intermedio para que quede suave
+      const mx = mid.getContext('2d'); mx.imageSmoothingQuality = 'high'; mx.drawImage(img, sx, sy, side, side, 0, 0, 256, 256);
+      for (const px of [64, 56, 48]) {
+        const cv = document.createElement('canvas'); cv.width = cv.height = px;
+        const cx = cv.getContext('2d'); cx.imageSmoothingQuality = 'high'; cx.drawImage(mid, 0, 0, px, px);
+        for (const q of [.6, .5, .4, .3]) {
+          let d = cv.toDataURL('image/webp', q);
+          if (!d.startsWith('data:image/webp')) d = cv.toDataURL('image/jpeg', q);   // Safari no genera webp
+          const b64 = d.split(',')[1];
+          if (b64.length <= MAX_FOTO || (px === 48 && q === .3)) return ok(b64);
+        }
+      }
+    };
+    img.onerror = () => no(new Error('No se pudo leer la foto. Prueba con otra.'));
+    img.src = url;
+  });
+  $('foto').onchange = async e => {
+    const file = e.target.files[0]; $('ferr').textContent = '';
+    if (!file) return;
+    try { photo = await toSmall(file); } catch (x) { $('ferr').textContent = x.message; }
+    showPhoto(); persist(); e.target.value = '';
+  };
+  $('fquit').onclick = () => { photo = ''; showPhoto(); persist(); };
+  showPhoto();
   $('iadd').onclick = () => incRow(false, '', true);
   $('hadd').onclick = () => helpRow(false, '', true);
   $('ladd').onclick = () => likeRow(false, '', true);
